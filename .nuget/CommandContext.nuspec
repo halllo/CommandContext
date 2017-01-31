@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>CommandContext</id>
+        <version>$version$</version>
+        <authors>Manuel Naujoks</authors>
+        <licenseUrl>http://opensource.org/licenses/MIT</licenseUrl>
+        <projectUrl>https://github.com/halllo/CommandContext</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>DataContext and CommandContext allow you to separate data and commands into two dedicated view models.</description>
+        <summary>separate data and commands</summary>
+        <releaseNotes />
+        <tags>CommandContext CommandBinding Binding ViewModel vm MVVM DataContext MVC</tags>
+    </metadata>
+    <files>
+        <file src="..\CommandContext\CommandContext\bin\Release\CommandContext.dll" target="lib\net461\CommandContext.dll" />
+    </files>
+</package>
