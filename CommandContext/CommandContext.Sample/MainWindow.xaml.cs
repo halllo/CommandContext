@@ -1,17 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+﻿using System.Windows;
+using CommandContext;
 
 namespace CommandContext_Sample
 {
@@ -20,6 +8,23 @@ namespace CommandContext_Sample
 		public MainWindow()
 		{
 			InitializeComponent();
+
+			this.DataContext = new ViewModel { Input = "beispielhafte Eingabe" };
+			this.CommandContext(new Controller { Name = "Controller" });
+			this.TheInnerButton.CommandContext(new Controller { Name = "Inner Controller" });
 		}
+	}
+
+
+	public class Controller
+	{
+		public string Name { get; set; }
+
+		public void SayHi() => MessageBox.Show($"Hi {Name}");
+	}
+
+	public class ViewModel
+	{
+		public string Input { get; set; }
 	}
 }

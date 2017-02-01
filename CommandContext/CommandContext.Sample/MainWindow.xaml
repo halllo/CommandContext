@@ -3,13 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:cmdbdg="clr-namespace:CommandContext;assembly=CommandContext"
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525">
-    <Grid>
-		<Button Width="200" Height="100">
+	<Grid x:Name="TheGrid">
+		<Button x:Name="TheOuterButton" Width="200" Height="100" Command="{cmdbdg:CommandBinding 'SayHi()'}">
 			<StackPanel>
 				<TextBlock Text="Outer Button"/>
-				<Button Content="Inner Button"/>
+				<TextBlock Text="{Binding Input,StringFormat=Input: {0}}"/>
+				<Button x:Name="TheInnerButton" Content="Inner Button"  Command="{cmdbdg:CommandBinding 'SayHi()'}"/>
 			</StackPanel>
 		</Button>
     </Grid>
