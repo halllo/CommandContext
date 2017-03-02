@@ -7,12 +7,20 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525">
 	<Grid x:Name="TheGrid">
-		<Button x:Name="TheOuterButton" Width="200" Height="100" Command="{cmdbdg:CommandBinding 'SayHi()'}">
+		<Grid.RowDefinitions>
+			<RowDefinition/>
+			<RowDefinition/>
+		</Grid.RowDefinitions>
+		<Button x:Name="TheOuterButton" Grid.Row="0" Width="200" Height="100" Command="{cmdbdg:CommandBinding 'SayHi()'}">
 			<StackPanel>
 				<TextBlock Text="Outer Button"/>
 				<TextBlock Text="{Binding Input,StringFormat=Input: {0}}"/>
-				<Button x:Name="TheInnerButton" Content="Inner Button"  Command="{cmdbdg:CommandBinding 'SayHi()'}"/>
+				<Button x:Name="TheInnerButton" Content="Inner Button" Command="{cmdbdg:CommandBinding 'SayHi()'}"/>
 			</StackPanel>
 		</Button>
+		<StackPanel Grid.Row="1" >
+			<Rectangle x:Name="rect" Width="50" Height="50" Fill="Aqua" MouseDown="{cmdbdg:CommandBinding 'SayHi()'}" MouseUp="{cmdbdg:CommandBinding 'SayHi()'}"/>
+			<Button Content="Mit Click-Event" Click="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
+		</StackPanel>
     </Grid>
 </Window>

@@ -29,3 +29,10 @@ class ViewModel {
 <Button Content="{Binding MethodTitle}" Command="{cmdctx:CommandBinding Method()}"/>
 ...
 ```
+
+It also supports binding to events.
+```xaml
+<!--View.xaml-->
+<Button Content="{Binding MethodTitle}" Click="{cmdctx:CommandBinding Method()}"/>
+...
+```

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
@@ -78,10 +79,66 @@ namespace CommandContext
 					return true;
 				});
 			}
+			else if (targetPropertyType.Name == "RuntimeMethodInfo" && Path.EndsWith("()"))
+			{
+				var name = GetPropertyName(serviceProvider);
+				var eventName = Regex.Match(name, "Add(.*)Handler").Groups[1].Value;
+
+				var instance = GetPropertyInstance(serviceProvider);
+				var methodName = string.Concat(Path.Reverse().Skip(2).Reverse());
+
+				var @event = instance.GetType().GetEvent(eventName);
+				return EventHandler(@event.EventHandlerType, () =>
+				{
+					var commandContext = CommandContextResolver(instance);
+					var dataContextType = commandContext.GetType();
+					var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
+					if (method == null)
+					{
+						throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
+					}
+					else
+					{
+						method.Invoke(commandContext, null);
+					}
+				});
+			}
+			else if (targetPropertyType.Name == "RuntimeEventInfo" && Path.EndsWith("()"))
+			{
+				var name = GetPropertyName(serviceProvider);
+				var eventName = name;
+
+				var instance = GetPropertyInstance(serviceProvider);
+				var methodName = string.Concat(Path.Reverse().Skip(2).Reverse());
+
+				var @event = instance.GetType().GetEvent(eventName);
+				return EventHandler(@event.EventHandlerType, () =>
+				{
+					var commandContext = CommandContextResolver(instance);
+					var dataContextType = commandContext.GetType();
+					var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
+					if (method == null)
+					{
+						throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
+					}
+					else
+					{
+						method.Invoke(commandContext, null);
+					}
+				});
+			}
 			else
 			{
 				throw new NotSupportedException($"\"{Path}\" not suppoerted as {nameof(CommandBinding)}.");
 			}
+		}
+
+		static Delegate EventHandler(Type type, Action action)
+		{
+			if (type == typeof(MouseButtonEventHandler)) return new MouseButtonEventHandler((s, e) => action());
+			if (type == typeof(KeyEventHandler)) return new KeyEventHandler((s, e) => action());
+			if (type == typeof(RoutedEventHandler)) return new RoutedEventHandler((s, e) => action());
+			else throw new ArgumentException($"CommandBinding events is not yet supported for \"{type.Name}\"");
 		}
 
 		Type GetPropertyType(IServiceProvider serviceProvider)
@@ -94,6 +151,13 @@ namespace CommandContext
 			}
 
 			return targetProvider.TargetProperty.GetType();
+		}
+
+		string GetPropertyName(IServiceProvider serviceProvider)
+		{
+			var targetProvider = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
+
+			return ((MemberInfo)targetProvider.TargetProperty).Name;
 		}
 
 		object GetPropertyInstance(IServiceProvider serviceProvider)
