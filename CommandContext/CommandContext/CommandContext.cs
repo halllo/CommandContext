@@ -13,22 +13,29 @@ namespace CommandContext
 		public static readonly DependencyProperty CommandContextProperty = DependencyProperty.RegisterAttached(
 			"CommandContext",
 			typeof(object),
-			typeof(DependencyObject),
+			typeof(CommandContextDefinition),
 			new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.Inherits)
 		);
-	}
 
-	public static class CommandContextAccess
-	{
+		public static void SetCommandContext(DependencyObject element, object commandContext)
+		{
+			element.SetValue(CommandContextProperty, commandContext);
+		}
+
+		public static object GetCommandContext(DependencyObject element)
+		{
+			return element.GetValue(CommandContextProperty);
+		}
+
 		public static T CommandContext<T>(this T element, object commandContext) where T : DependencyObject
 		{
-			element.SetValue(CommandContextDefinition.CommandContextProperty, commandContext);
+			element.SetValue(CommandContextProperty, commandContext);
 			return element;
 		}
 
 		public static object CommandContext(this DependencyObject element)
 		{
-			return element.GetValue(CommandContextDefinition.CommandContextProperty);
+			return element.GetValue(CommandContextProperty);
 		}
 	}
 
