@@ -11,16 +11,20 @@
 			<RowDefinition/>
 			<RowDefinition/>
 		</Grid.RowDefinitions>
-		<Button x:Name="TheOuterButton" Grid.Row="0" Width="200" Height="100" Command="{cmdbdg:CommandBinding 'SayHi()'}">
+		<Button x:Name="TheOuterButton" Grid.Row="0" Width="200" Height="100" Command="{cmdbdg:CommandBinding 'SayHiOutsideOrInside(false)'}">
 			<StackPanel>
 				<TextBlock Text="Outer Button"/>
 				<TextBlock Text="{Binding Input,StringFormat=Input: {0}}"/>
-				<Button x:Name="TheInnerButton" Content="Inner Button" Command="{cmdbdg:CommandBinding 'SayHi()'}"/>
+				<Button x:Name="TheInnerButton" Content="Inner Button" Command="{cmdbdg:CommandBinding 'SayHiOutsideOrInside(true)'}"/>
 			</StackPanel>
 		</Button>
 		<StackPanel Grid.Row="1" >
 			<Rectangle x:Name="rect" Width="50" Height="50" Fill="Aqua" MouseDown="{cmdbdg:CommandBinding 'SayHi()'}" MouseUp="{cmdbdg:CommandBinding 'SayHi()'}"/>
 			<Button Content="Mit Click-Event" Click="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
+			<Border Width="200" Height="50" Background="GreenYellow" Tag="tag123" MouseUp="{cmdbdg:CommandBinding 'SayHiTo(Manuel,Tag)'}">
+				<TextBlock Text="SayHiTo(Manuel,Tag)" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+			</Border>
+					
 		</StackPanel>
     </Grid>
 </Window>

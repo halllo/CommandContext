@@ -36,3 +36,10 @@ It also supports binding to events.
 <Button Content="{Binding MethodTitle}" Click="{cmdctx:CommandBinding Method()}"/>
 ...
 ```
+
+And you can also pass in method arguments. Arguments can either be 'this' (the element it was bound to), properties of that element or simple constants.
+```xaml
+<!--View.xaml-->
+<Button Tag="123" Content="{Binding MethodTitle}" Click="{cmdctx:CommandBinding Method(this,Tag,true)}"/>
+...
+```

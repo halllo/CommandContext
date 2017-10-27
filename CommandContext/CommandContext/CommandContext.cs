@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
@@ -39,6 +40,26 @@ namespace CommandContext
 		}
 	}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public class CommandBinding : MarkupExtension
 	{
 		public CommandBinding() { }
@@ -49,27 +70,45 @@ namespace CommandContext
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
 			var targetPropertyType = GetPropertyType(serviceProvider);
-			if (targetPropertyType == typeof(ICommand) && Path.EndsWith("()"))
+			if (targetPropertyType == typeof(ICommand))
 			{
 				var instance = GetPropertyInstance(serviceProvider);
-				var methodName = string.Concat(Path.Reverse().Skip(2).Reverse());
-				return CommandConstructor(() =>
+				return MatchMethodSignature(Path, (methodName, methodArguments) =>
+					CreateCommand(instance, methodName, methodArguments));
+			}
+			else if (targetPropertyType.Name == "RuntimeMethodInfo")
+			{
+				var instance = GetPropertyInstance(serviceProvider);
+				var eventName = Regex.Match(GetPropertyName(serviceProvider), "Add(.*)Handler").Groups[1].Value;
+				var @event = instance.GetType().GetEvent(eventName);
+				return MatchMethodSignature(Path, (methodName, methodArguments) =>
+					CreateEventHandler(@event.EventHandlerType, () => InvokeMethod(instance, methodName, methodArguments)));
+			}
+			else if (targetPropertyType.Name == "RuntimeEventInfo")
+			{
+				var instance = GetPropertyInstance(serviceProvider);
+				var eventName = GetPropertyName(serviceProvider);
+				var @event = instance.GetType().GetEvent(eventName);
+				return MatchMethodSignature(Path, (methodName, methodArguments) =>
+					CreateEventHandler(@event.EventHandlerType, () => InvokeMethod(instance, methodName, methodArguments)));
+			}
+			else
+			{
+				throw new NotSupportedException($"\"{Path}\" not suppoerted as {nameof(CommandBinding)}.");
+			}
+		}
+
+		public static ICommand CreateCommand(object instance, string path)
+		{
+			return MatchMethodSignature(path, (methodName, methodArguments) => CreateCommand(instance, methodName, methodArguments));
+		}
+
+		static ICommand CreateCommand(object instance, string methodName, string[] methodArguments)
+		{
+			return CommandConstructor(
+				() =>
 				{
-					var commandContext = CommandContextResolver(instance);
-					if (commandContext == null)
-					{
-						throw new NotSupportedException($"\"{instance.GetType().Name}\" has no CommandContext.");
-					}
-					var dataContextType = commandContext.GetType();
-					var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
-					if (method == null)
-					{
-						throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
-					}
-					else
-					{
-						method.Invoke(commandContext, null);
-					}
+					InvokeMethod(instance, methodName, methodArguments);
 				},
 				() =>
 				{
@@ -85,62 +124,83 @@ namespace CommandContext
 					}
 					return true;
 				});
-			}
-			else if (targetPropertyType.Name == "RuntimeMethodInfo" && Path.EndsWith("()"))
+		}
+
+
+		static void InvokeMethod(object instance, string methodName, string[] methodArguments)
+		{
+			var commandContext = CommandContextResolver(instance);
+			if (commandContext == null)
 			{
-				var name = GetPropertyName(serviceProvider);
-				var eventName = Regex.Match(name, "Add(.*)Handler").Groups[1].Value;
-
-				var instance = GetPropertyInstance(serviceProvider);
-				var methodName = string.Concat(Path.Reverse().Skip(2).Reverse());
-
-				var @event = instance.GetType().GetEvent(eventName);
-				return EventHandler(@event.EventHandlerType, () =>
-				{
-					var commandContext = CommandContextResolver(instance);
-					var dataContextType = commandContext.GetType();
-					var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
-					if (method == null)
-					{
-						throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
-					}
-					else
-					{
-						method.Invoke(commandContext, null);
-					}
-				});
+				throw new NotSupportedException($"\"{instance.GetType().Name}\" has no CommandContext.");
 			}
-			else if (targetPropertyType.Name == "RuntimeEventInfo" && Path.EndsWith("()"))
+			var dataContextType = commandContext.GetType();
+			var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
+			if (method == null)
 			{
-				var name = GetPropertyName(serviceProvider);
-				var eventName = name;
-
-				var instance = GetPropertyInstance(serviceProvider);
-				var methodName = string.Concat(Path.Reverse().Skip(2).Reverse());
-
-				var @event = instance.GetType().GetEvent(eventName);
-				return EventHandler(@event.EventHandlerType, () =>
-				{
-					var commandContext = CommandContextResolver(instance);
-					var dataContextType = commandContext.GetType();
-					var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
-					if (method == null)
-					{
-						throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
-					}
-					else
-					{
-						method.Invoke(commandContext, null);
-					}
-				});
+				throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
 			}
 			else
 			{
-				throw new NotSupportedException($"\"{Path}\" not suppoerted as {nameof(CommandBinding)}.");
+				var methodParameters = method.GetParameters();
+				var parameters = methodArguments.Select((a, index) =>
+				{
+					if (a == "this")
+						return instance;
+					else
+					{
+						var property = instance.GetType().GetProperty(a, BindingFlags.Public | BindingFlags.Instance);
+						if (property != null)
+							return property.GetValue(instance);
+						else
+							return Convert.ChangeType(a, methodParameters[index].ParameterType);
+					}
+				}).ToArray();
+				try
+				{
+					method.Invoke(commandContext, parameters);
+				}
+				catch (TargetInvocationException e)
+				{
+					ExceptionDispatchInfo.Capture(e.InnerException ?? e).Throw();
+				}
 			}
 		}
 
-		static Delegate EventHandler(Type type, Action action)
+
+
+
+
+		static readonly Regex MethodSignatureRegex = new Regex("^(?<methodName>\\w*)\\((?<p0>\\w+)?(?:,\\s?(?<p1>\\w+))?(?:,\\s?(?<p2>\\w+))?(?:,\\s?(?<p3>\\w+))?\\)$", RegexOptions.Compiled);
+		static TResult MatchMethodSignature<TResult>(string path, Func<string, string[], TResult> continuation)
+		{
+			var methodSignatureMatch = MethodSignatureRegex.Match(path);
+			if (methodSignatureMatch.Success)
+			{
+				var methodName = methodSignatureMatch.Groups["methodName"].Value;
+				var methodArguments = new[]
+				{
+					methodSignatureMatch.Groups["p0"].Value,
+					methodSignatureMatch.Groups["p1"].Value,
+					methodSignatureMatch.Groups["p2"].Value,
+					methodSignatureMatch.Groups["p3"].Value,
+				}.Where(g => !string.IsNullOrWhiteSpace(g)).ToArray();
+
+				return continuation(methodName, methodArguments);
+			}
+			else
+			{
+				throw new NotSupportedException($"\"{path}\" not supported as {nameof(CommandBinding)}.");
+			}
+		}
+
+
+
+
+
+
+
+		static Delegate CreateEventHandler(Type type, Action action)
 		{
 			if (type == typeof(MouseButtonEventHandler)) return new MouseButtonEventHandler((s, e) => action());
 			if (type == typeof(KeyEventHandler)) return new KeyEventHandler((s, e) => action());
@@ -179,7 +239,10 @@ namespace CommandContext
 			return targetProvider.TargetObject;
 		}
 
-		private static Func<object, object> CommandContextResolver = element => (element as DependencyObject).CommandContext();
+
+
+
+		static Func<object, object> CommandContextResolver = element => (element as DependencyObject).CommandContext();
 		public static Func<Action, Func<bool>, ICommand> CommandConstructor = (execute, canExecute) => new Command(execute, canExecute);
 	}
 }

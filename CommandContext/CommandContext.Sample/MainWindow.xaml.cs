@@ -21,6 +21,10 @@ namespace CommandContext_Sample
 		public string Name { get; set; }
 
 		public void SayHi() => MessageBox.Show($"Hi {Name}");
+
+		public void SayHiTo(string parameter, object tag) => MessageBox.Show($"Hi {parameter}! (Tag: {tag})");
+
+		public void SayHiOutsideOrInside(bool t) => MessageBox.Show($"Hi {(t ? "inside" : "outside")}");
 	}
 
 	public class ViewModel
