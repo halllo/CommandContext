@@ -24,7 +24,8 @@
 			<Border Width="200" Height="50" Background="GreenYellow" Tag="tag123" MouseUp="{cmdbdg:CommandBinding 'SayHiTo(Manuel,Tag)'}">
 				<TextBlock Text="SayHiTo(Manuel,Tag)" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 			</Border>
-					
+			<Button Content="Show" Command="{cmdbdg:CommandBinding 'ShowIfEnabled(123)'}"></Button>
+			<CheckBox Content="IsEnabled" IsChecked="{Binding IsEnabled}"/>
 		</StackPanel>
     </Grid>
 </Window>

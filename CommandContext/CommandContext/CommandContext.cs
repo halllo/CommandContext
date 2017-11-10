@@ -82,7 +82,7 @@ namespace CommandContext
 				var eventName = Regex.Match(GetPropertyName(serviceProvider), "Add(.*)Handler").Groups[1].Value;
 				var @event = instance.GetType().GetEvent(eventName);
 				return MatchMethodSignature(Path, (methodName, methodArguments) =>
-					CreateEventHandler(@event.EventHandlerType, () => InvokeMethod(instance, methodName, methodArguments)));
+					CreateEventHandler(@event.EventHandlerType, () => MethodReflection.Invoke(instance, methodName, methodArguments)));
 			}
 			else if (targetPropertyType.Name == "RuntimeEventInfo")
 			{
@@ -90,7 +90,7 @@ namespace CommandContext
 				var eventName = GetPropertyName(serviceProvider);
 				var @event = instance.GetType().GetEvent(eventName);
 				return MatchMethodSignature(Path, (methodName, methodArguments) =>
-					CreateEventHandler(@event.EventHandlerType, () => InvokeMethod(instance, methodName, methodArguments)));
+					CreateEventHandler(@event.EventHandlerType, () => MethodReflection.Invoke(instance, methodName, methodArguments)));
 			}
 			else
 			{
@@ -106,41 +106,54 @@ namespace CommandContext
 		static ICommand CreateCommand(object instance, string methodName, string[] methodArguments)
 		{
 			return CommandConstructor(
-				() =>
-				{
-					InvokeMethod(instance, methodName, methodArguments);
-				},
-				() =>
-				{
-					var commandContext = CommandContextResolver(instance);
-					if (commandContext != null)
-					{
-						var dataContextType = commandContext.GetType();
-						var method2 = dataContextType.GetMethod("Can" + methodName, BindingFlags.Public | BindingFlags.Instance);
-						if (method2 != null && method2.ReturnType == typeof(bool))
-						{
-							return (bool)method2.Invoke(commandContext, null);
-						}
-					}
-					return true;
-				});
+				() => MethodReflection.Invoke(instance, methodName, methodArguments),
+				() => MethodReflection.CanInvoke(instance, methodName, methodArguments)
+			);
 		}
 
 
-		static void InvokeMethod(object instance, string methodName, string[] methodArguments)
+
+
+
+
+
+		static class MethodReflection
 		{
-			var commandContext = CommandContextResolver(instance);
-			if (commandContext == null)
+			public static void Invoke(object instance, string methodName, string[] methodArguments)
 			{
-				throw new NotSupportedException($"\"{instance.GetType().Name}\" has no CommandContext.");
+				var commandContext = CommandContextResolver(instance);
+				if (commandContext == null)
+				{
+					throw new NotSupportedException($"\"{instance.GetType().Name}\" has no CommandContext.");
+				}
+				var dataContextType = commandContext.GetType();
+				var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
+				if (method == null)
+				{
+					throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
+				}
+				else
+				{
+					InvokeWithParameters(method, instance, methodArguments, commandContext);
+				}
 			}
-			var dataContextType = commandContext.GetType();
-			var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
-			if (method == null)
+
+			public static bool CanInvoke(object instance, string methodName, string[] methodArguments)
 			{
-				throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
+				var commandContext = CommandContextResolver(instance);
+				if (commandContext != null)
+				{
+					var dataContextType = commandContext.GetType();
+					var method2 = dataContextType.GetMethod("Can" + methodName, BindingFlags.Public | BindingFlags.Instance);
+					if (method2 != null && method2.ReturnType == typeof(bool))
+					{
+						return (bool)InvokeWithParameters(method2, instance, methodArguments, commandContext);
+					}
+				}
+				return true;
 			}
-			else
+
+			static object InvokeWithParameters(MethodInfo method, object instance, string[] methodArguments, object commandContext)
 			{
 				var methodParameters = method.GetParameters();
 				var parameters = methodArguments.Select((a, index) =>
@@ -158,12 +171,13 @@ namespace CommandContext
 				}).ToArray();
 				try
 				{
-					method.Invoke(commandContext, parameters);
+					return method.Invoke(commandContext, parameters);
 				}
 				catch (TargetInvocationException e)
 				{
 					ExceptionDispatchInfo.Capture(e.InnerException ?? e).Throw();
 				}
+				return null;
 			}
 		}
 
@@ -197,9 +211,6 @@ namespace CommandContext
 
 
 
-
-
-
 		static Delegate CreateEventHandler(Type type, Action action)
 		{
 			if (type == typeof(MouseButtonEventHandler)) return new MouseButtonEventHandler((s, e) => action());
@@ -207,6 +218,9 @@ namespace CommandContext
 			if (type == typeof(RoutedEventHandler)) return new RoutedEventHandler((s, e) => action());
 			else throw new ArgumentException($"CommandBinding events is not yet supported for \"{type.Name}\"");
 		}
+
+
+
 
 		Type GetPropertyType(IServiceProvider serviceProvider)
 		{
