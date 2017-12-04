@@ -5,27 +5,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:cmdbdg="clr-namespace:CommandContext;assembly=CommandContext"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+        Title="MainWindow" Height="450" Width="525">
 	<Grid x:Name="TheGrid">
-		<Grid.RowDefinitions>
-			<RowDefinition/>
-			<RowDefinition/>
-		</Grid.RowDefinitions>
-		<Button x:Name="TheOuterButton" Grid.Row="0" Width="200" Height="100" Command="{cmdbdg:CommandBinding 'SayHiOutsideOrInside(false)'}">
-			<StackPanel>
-				<TextBlock Text="Outer Button"/>
-				<TextBlock Text="{Binding Input,StringFormat=Input: {0}}"/>
-				<Button x:Name="TheInnerButton" Content="Inner Button" Command="{cmdbdg:CommandBinding 'SayHiOutsideOrInside(true)'}"/>
-			</StackPanel>
-		</Button>
-		<StackPanel Grid.Row="1" >
-			<Rectangle x:Name="rect" Width="50" Height="50" Fill="Aqua" MouseDown="{cmdbdg:CommandBinding 'SayHi()'}" MouseUp="{cmdbdg:CommandBinding 'SayHi()'}"/>
-			<Button Content="Mit Click-Event" Click="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
-			<Border Width="200" Height="50" Background="GreenYellow" Tag="tag123" MouseUp="{cmdbdg:CommandBinding 'SayHiTo(Manuel,Tag)'}">
-				<TextBlock Text="SayHiTo(Manuel,Tag)" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-			</Border>
-			<Button Content="Show" Command="{cmdbdg:CommandBinding 'ShowIfEnabled(123)'}"></Button>
-			<CheckBox Content="IsEnabled" IsChecked="{Binding IsEnabled}"/>
+		<StackPanel>
+			<DockPanel Margin="10">
+				<TextBlock DockPanel.Dock="Top" Text="MouseDown / MouseUp" />
+				<Rectangle x:Name="rect" Height="30" Fill="Aqua" MouseDown="{cmdbdg:CommandBinding 'SayHi()'}" MouseUp="{cmdbdg:CommandBinding 'SayHi()'}"/>
+			</DockPanel>
+			<Button Margin="10" Content="Click" Click="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
+			<Button Margin="10" Content="Command" Command="{cmdbdg:CommandBinding 'SayHiTo(123)'}"></Button>
+			<DockPanel Margin="10">
+				<TextBlock DockPanel.Dock="Top" Text="Binding.SourceUpdated" />
+				<TextBox Background="LightSteelBlue" Text="{Binding Input,Mode=TwoWay,NotifyOnSourceUpdated=True}" Binding.SourceUpdated="{cmdbdg:CommandBinding 'SayHiTo(Text)'}"/>
+			</DockPanel>
 		</StackPanel>
-    </Grid>
+	</Grid>
 </Window>

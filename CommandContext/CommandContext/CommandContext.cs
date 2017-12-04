@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
 
@@ -216,6 +217,7 @@ namespace CommandContext
 			if (type == typeof(MouseButtonEventHandler)) return new MouseButtonEventHandler((s, e) => action());
 			if (type == typeof(KeyEventHandler)) return new KeyEventHandler((s, e) => action());
 			if (type == typeof(RoutedEventHandler)) return new RoutedEventHandler((s, e) => action());
+			if (type == typeof(EventHandler<DataTransferEventArgs>)) return new EventHandler<DataTransferEventArgs>((s, e) => action());
 			else throw new ArgumentException($"CommandBinding events is not yet supported for \"{type.Name}\"");
 		}
 

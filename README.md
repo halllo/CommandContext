@@ -24,6 +24,7 @@ class ViewModel {
    public string MethodTitle { get; set; }
 }
 ```
+
 ```xaml
 <!--View.xaml-->
 <Button Content="{Binding MethodTitle}" Command="{cmdctx:CommandBinding Method()}"/>
@@ -34,6 +35,15 @@ It also supports binding to events.
 ```xaml
 <!--View.xaml-->
 <Button Content="{Binding MethodTitle}" Click="{cmdctx:CommandBinding Method()}"/>
+...
+```
+
+That includes binding to Binding.SourceUpdated in order to get notified when a regular data binding completes.
+```xaml
+<!--View.xaml-->
+<TextBox 
+   Text="{Binding MethodTitle,Mode=TwoWay,NotifyOnSourceUpdated=True}" 
+   Binding.SourceUpdated="{cmdctx:CommandBinding Method()}"/>
 ...
 ```
 
