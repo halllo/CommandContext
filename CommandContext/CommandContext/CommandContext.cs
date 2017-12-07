@@ -95,7 +95,7 @@ namespace CommandContext
 			}
 			else
 			{
-				throw new NotSupportedException($"\"{Path}\" not suppoerted as {nameof(CommandBinding)}.");
+				throw new NotSupportedException($"\"{Path}\" not supported as {nameof(CommandBinding)}.");
 			}
 		}
 
@@ -127,18 +127,20 @@ namespace CommandContext
 				{
 					throw new NotSupportedException($"\"{instance.GetType().Name}\" has no CommandContext.");
 				}
+				var parameters = ResolveParameters(instance, methodArguments);
 				var dataContextType = commandContext.GetType();
-				var methods = dataContextType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-				var method = methods
-					.Where(m => m.Name == methodName && m.GetParameters().Length == methodArguments.Length)
-					.SingleOrDefault();
+				var methods = dataContextType
+					.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+					.Where(m => m.Name == methodName && m.GetParameters().Length == parameters.Length)
+					.ToArray();
+				var method = FindBestMethod(methods, parameters);
 				if (method == null)
 				{
 					throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
 				}
 				else
 				{
-					InvokeWithParameters(method, instance, methodArguments, commandContext);
+					InvokeWithParameters(method, parameters, commandContext);
 				}
 			}
 
@@ -147,24 +149,121 @@ namespace CommandContext
 				var commandContext = CommandContextResolver(instance);
 				if (commandContext != null)
 				{
+					var parameters = ResolveParameters(instance, methodArguments);
 					var dataContextType = commandContext.GetType();
-					var methods = dataContextType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-					var method = methods
-						.Where(m => m.Name == "Can" + methodName && m.GetParameters().Length == methodArguments.Length && m.ReturnType == typeof(bool))
-						.SingleOrDefault();
+					var methods = dataContextType
+						.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+						.Where(m => m.Name == "Can" + methodName && m.GetParameters().Length == parameters.Length && m.ReturnType == typeof(bool))
+						.ToArray();
+					var method = FindBestMethod(methods, parameters);
 					if (method != null)
 					{
-						return (bool)InvokeWithParameters(method, instance, methodArguments, commandContext);
+						return (bool)InvokeWithParameters(method, parameters, commandContext);
 					}
 				}
 				return true;
 			}
 
-			static object InvokeWithParameters(MethodInfo method, object instance, string[] methodArguments, object commandContext)
+			static ResolvedParameter[] ResolveParameters(object instance, string[] methodArguments)
+			{
+				var parameters = methodArguments.Select((a, index) =>
+				{
+					if (a == "this")
+					{
+						return ResolvedParameter.New(instance, instance.GetType(), a);
+					}
+					else
+					{
+						var splitted = a.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+						var target = instance;
+						var result = default(object);
+						var resultType = default(Type);
+						foreach (var split in splitted)
+						{
+							if (target == null)
+							{
+								resultType = null;
+								break;
+							}
+							var property = target.GetType().GetProperty(split, BindingFlags.Public | BindingFlags.Instance);
+							if (property != null)
+							{
+								resultType = property.PropertyType;
+								result = target = property.GetValue(target);
+							}
+							else
+							{
+								return ResolvedParameter.Unresolvable(a);
+							}
+						}
+						return ResolvedParameter.New(result, resultType, a);
+					}
+				}).ToArray();
+				return parameters;
+			}
+			class ResolvedParameter
+			{
+				public static ResolvedParameter Unresolvable(string descriptor) => new ResolvedParameter { Descriptor = descriptor, Resolvable = false };
+				public static ResolvedParameter New(object value, Type type, string descriptor) => new ResolvedParameter { Descriptor = descriptor, Value = value, Type = type, Resolvable = true };
+				private ResolvedParameter() { }
+				public bool Resolvable { get; private set; }
+				public object Value { get; private set; }
+				public Type Type { get; private set; }
+				public string Descriptor { get; private set; }
+			}
+
+			static MethodInfo FindBestMethod(MethodInfo[] methods, ResolvedParameter[] resolvedParameters)
+			{
+				if (methods.Length == 0) return null;
+				else if (methods.Length == 1) return methods[0];
+				else
+				{
+					foreach (var method in methods)
+					{
+						var parameterTypeMatches = Enumerable.Zip(
+							first: method.GetParameters().Select(p => p.ParameterType), 
+							second: resolvedParameters, 
+							resultSelector: (methodParameterType, resolvedParameter) =>
+							{
+								if (!resolvedParameter.Resolvable)
+								{
+									try
+									{
+										var result = Convert.ChangeType(resolvedParameter.Descriptor, methodParameterType);
+										return true;
+									}
+									catch (Exception)
+									{
+										return false;
+									}
+								}
+								else if (resolvedParameter.Type == null)
+								{
+									return !methodParameterType.IsValueType;
+								}
+								else if (resolvedParameter.Value == null)
+								{
+									return methodParameterType.IsAssignableFrom(resolvedParameter.Type);
+								}
+								else
+								{
+									return methodParameterType.IsInstanceOfType(resolvedParameter.Value);
+								}
+							});
+						if (parameterTypeMatches.All(m => m))
+						{
+							return method;
+						}
+					}
+					return null;
+				}
+			}
+
+			static object InvokeWithParameters(MethodInfo method, ResolvedParameter[] resolvedParameters, object commandContext)
 			{
 				var parameters = Enumerable
 					.Zip(
-						first: ResolveParameters(instance, methodArguments),
+						first: resolvedParameters,
 						second: method.GetParameters(),
 						resultSelector: (resolvedParameter, actualParameter) => resolvedParameter.Resolvable ? resolvedParameter.Value : Convert.ChangeType(resolvedParameter.Descriptor, actualParameter.ParameterType))
 					.ToArray();
@@ -177,61 +276,6 @@ namespace CommandContext
 					ExceptionDispatchInfo.Capture(e.InnerException ?? e).Throw();
 				}
 				return null;
-			}
-
-			static ResolvedParameter[] ResolveParameters(object instance, string[] methodArguments)
-			{
-				var parameters = methodArguments.Select((a, index) =>
-				{
-					if (a == "this")
-					{
-						return new ResolvedParameter(instance, a);
-					}
-					else
-					{
-						var splitted = a.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-
-						object target = instance;
-						object result = null;
-						foreach (var split in splitted)
-						{
-							var property = target.GetType().GetProperty(split, BindingFlags.Public | BindingFlags.Instance);
-							if (property != null)
-							{
-								result = target = property.GetValue(target);
-								if (target == null)
-								{
-									break;
-								}
-							}
-							else
-							{
-								return ResolvedParameter.Unresolvable(a);
-							}
-						}
-						return new ResolvedParameter(result, a);
-					}
-				}).ToArray();
-				return parameters;
-			}
-
-			struct ResolvedParameter
-			{
-				public static ResolvedParameter Unresolvable(string descriptor)
-				{
-					return new ResolvedParameter(null, descriptor) { Resolvable = false };
-				}
-
-				public ResolvedParameter(object value, string descriptor)
-				{
-					Value = value;
-					Descriptor = descriptor;
-					Resolvable = true;
-				}
-
-				public bool Resolvable { get; private set; }
-				public object Value { get; }
-				public string Descriptor { get; }
 			}
 		}
 

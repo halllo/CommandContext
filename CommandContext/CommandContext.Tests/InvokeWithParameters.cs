@@ -3,7 +3,7 @@
 namespace CommandContext.Tests
 {
 	[TestClass]
-	public class InvokeWithParamters
+	public class InvokeWithParameters
 	{
 		[TestInitialize]
 		public void Init()
@@ -26,8 +26,10 @@ namespace CommandContext.Tests
 				Do_Argument = s1;
 				Do_Argument2 = s2;
 			}
-			public void DoAmbiguous(OverloadType1 t1) => Do_Argument = t1.ToString();
-			public void DoAmbiguous(OverloadType2 t2) => Do_Argument = t2.ToString();
+			public void DoAmbiguous(OverloadType1 t1) => Do_Argument = t1?.ToString() ?? "<NULL1>";
+			public void DoAmbiguous(OverloadType2 t2) => Do_Argument = t2?.ToString() ?? "<NULL2>";
+			public void DoAmbiguous(OverloadType1 t1, int i1) => Do_Argument = (t1?.ToString() ?? "<NULL1>") + "_" + i1;
+			public void DoAmbiguous(OverloadType2 t2, int i2) => Do_Argument = (t2?.ToString() ?? "<NULL2>") + "_" + i2;
 
 			public string Do_Argument;
 			public string Do_Argument2;
@@ -124,7 +126,7 @@ namespace CommandContext.Tests
 		}
 
 		[TestMethod]
-		public void AmbiguousMethodnameOverloadsWithDifferentTypes()
+		public void AmbiguousMethodNameOverloadsWithDifferentTypes()
 		{
 			var control = new Control
 			{
@@ -139,6 +141,60 @@ namespace CommandContext.Tests
 			command = CommandBinding.CreateCommand(control, "DoAmbiguous(AmbiguousProperty1)");
 			command.Execute(null);
 			Assert.AreEqual(new OverloadType1().ToString(), control.Do_Argument);
+		}
+
+		[TestMethod]
+		public void AmbiguousMethodNameOverloadsWithDifferentTypesButNull()
+		{
+			var control = new Control
+			{
+				AmbiguousProperty1 = null,
+				AmbiguousProperty2 = null,
+			};
+
+			var command = CommandBinding.CreateCommand(control, "DoAmbiguous(AmbiguousProperty2)");
+			command.Execute(null);
+			Assert.AreEqual("<NULL2>", control.Do_Argument);
+
+			command = CommandBinding.CreateCommand(control, "DoAmbiguous(AmbiguousProperty1)");
+			command.Execute(null);
+			Assert.AreEqual("<NULL1>".ToString(), control.Do_Argument);
+		}
+
+		[TestMethod]
+		public void AmbiguousMethodNameOverloadsWithDifferentTypesAndInteger()
+		{
+			var control = new Control
+			{
+				AmbiguousProperty1 = new OverloadType1(),
+				AmbiguousProperty2 = new OverloadType2(),
+			};
+
+			var command = CommandBinding.CreateCommand(control, "DoAmbiguous(AmbiguousProperty2, 123)");
+			command.Execute(null);
+			Assert.AreEqual(new OverloadType2().ToString() + "_123", control.Do_Argument);
+
+			command = CommandBinding.CreateCommand(control, "DoAmbiguous(AmbiguousProperty1, 321)");
+			command.Execute(null);
+			Assert.AreEqual(new OverloadType1().ToString() + "_321", control.Do_Argument);
+		}
+
+		[TestMethod]
+		public void AmbiguousMethodNameOverloadsWithDifferentTypesButNullAndInteger()
+		{
+			var control = new Control
+			{
+				AmbiguousProperty1 = null,
+				AmbiguousProperty2 = null,
+			};
+
+			var command = CommandBinding.CreateCommand(control, "DoAmbiguous(AmbiguousProperty2, 123)");
+			command.Execute(null);
+			Assert.AreEqual("<NULL2>_123", control.Do_Argument);
+
+			command = CommandBinding.CreateCommand(control, "DoAmbiguous(AmbiguousProperty1, 321)");
+			command.Execute(null);
+			Assert.AreEqual("<NULL1>_321", control.Do_Argument);
 		}
 	}
 }
