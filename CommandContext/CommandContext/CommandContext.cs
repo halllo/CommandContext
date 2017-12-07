@@ -95,7 +95,7 @@ namespace CommandContext
 			}
 			else
 			{
-				throw new NotSupportedException($"\"{Path}\" not suppoerted as {nameof(CommandBinding)}.");
+				throw new NotSupportedException($"\"{Path}\" not supported as {nameof(CommandBinding)}.");
 			}
 		}
 
@@ -127,15 +127,20 @@ namespace CommandContext
 				{
 					throw new NotSupportedException($"\"{instance.GetType().Name}\" has no CommandContext.");
 				}
+				var parameters = ResolveParameters(instance, methodArguments);
 				var dataContextType = commandContext.GetType();
-				var method = dataContextType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
+				var methods = dataContextType
+					.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+					.Where(m => m.Name == methodName && m.GetParameters().Length == parameters.Length)
+					.ToArray();
+				var method = FindBestMethod(methods, parameters);
 				if (method == null)
 				{
 					throw new NotSupportedException($"\"{methodName}\" not found on \"{dataContextType.Name}\"");
 				}
 				else
 				{
-					InvokeWithParameters(method, instance, methodArguments, commandContext);
+					InvokeWithParameters(method, parameters, commandContext);
 				}
 			}
 
@@ -144,32 +149,124 @@ namespace CommandContext
 				var commandContext = CommandContextResolver(instance);
 				if (commandContext != null)
 				{
+					var parameters = ResolveParameters(instance, methodArguments);
 					var dataContextType = commandContext.GetType();
-					var method2 = dataContextType.GetMethod("Can" + methodName, BindingFlags.Public | BindingFlags.Instance);
-					if (method2 != null && method2.ReturnType == typeof(bool))
+					var methods = dataContextType
+						.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+						.Where(m => m.Name == "Can" + methodName && m.GetParameters().Length == parameters.Length && m.ReturnType == typeof(bool))
+						.ToArray();
+					var method = FindBestMethod(methods, parameters);
+					if (method != null)
 					{
-						return (bool)InvokeWithParameters(method2, instance, methodArguments, commandContext);
+						return (bool)InvokeWithParameters(method, parameters, commandContext);
 					}
 				}
 				return true;
 			}
 
-			static object InvokeWithParameters(MethodInfo method, object instance, string[] methodArguments, object commandContext)
+			static ResolvedParameter[] ResolveParameters(object instance, string[] methodArguments)
 			{
-				var methodParameters = method.GetParameters();
 				var parameters = methodArguments.Select((a, index) =>
 				{
 					if (a == "this")
-						return instance;
+					{
+						return ResolvedParameter.New(instance, instance.GetType(), a);
+					}
 					else
 					{
-						var property = instance.GetType().GetProperty(a, BindingFlags.Public | BindingFlags.Instance);
-						if (property != null)
-							return property.GetValue(instance);
-						else
-							return Convert.ChangeType(a, methodParameters[index].ParameterType);
+						var splitted = a.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+						var target = instance;
+						var result = default(object);
+						var resultType = default(Type);
+						foreach (var split in splitted)
+						{
+							if (target == null)
+							{
+								resultType = null;
+								break;
+							}
+							var property = target.GetType().GetProperty(split, BindingFlags.Public | BindingFlags.Instance);
+							if (property != null)
+							{
+								resultType = property.PropertyType;
+								result = target = property.GetValue(target);
+							}
+							else
+							{
+								return ResolvedParameter.Unresolvable(a);
+							}
+						}
+						return ResolvedParameter.New(result, resultType, a);
 					}
 				}).ToArray();
+				return parameters;
+			}
+			class ResolvedParameter
+			{
+				public static ResolvedParameter Unresolvable(string descriptor) => new ResolvedParameter { Descriptor = descriptor, Resolvable = false };
+				public static ResolvedParameter New(object value, Type type, string descriptor) => new ResolvedParameter { Descriptor = descriptor, Value = value, Type = type, Resolvable = true };
+				private ResolvedParameter() { }
+				public bool Resolvable { get; private set; }
+				public object Value { get; private set; }
+				public Type Type { get; private set; }
+				public string Descriptor { get; private set; }
+			}
+
+			static MethodInfo FindBestMethod(MethodInfo[] methods, ResolvedParameter[] resolvedParameters)
+			{
+				if (methods.Length == 0) return null;
+				else if (methods.Length == 1) return methods[0];
+				else
+				{
+					foreach (var method in methods)
+					{
+						var parameterTypeMatches = Enumerable.Zip(
+							first: method.GetParameters().Select(p => p.ParameterType), 
+							second: resolvedParameters, 
+							resultSelector: (methodParameterType, resolvedParameter) =>
+							{
+								if (!resolvedParameter.Resolvable)
+								{
+									try
+									{
+										var result = Convert.ChangeType(resolvedParameter.Descriptor, methodParameterType);
+										return true;
+									}
+									catch (Exception)
+									{
+										return false;
+									}
+								}
+								else if (resolvedParameter.Type == null)
+								{
+									return !methodParameterType.IsValueType;
+								}
+								else if (resolvedParameter.Value == null)
+								{
+									return methodParameterType.IsAssignableFrom(resolvedParameter.Type);
+								}
+								else
+								{
+									return methodParameterType.IsInstanceOfType(resolvedParameter.Value);
+								}
+							});
+						if (parameterTypeMatches.All(m => m))
+						{
+							return method;
+						}
+					}
+					return null;
+				}
+			}
+
+			static object InvokeWithParameters(MethodInfo method, ResolvedParameter[] resolvedParameters, object commandContext)
+			{
+				var parameters = Enumerable
+					.Zip(
+						first: resolvedParameters,
+						second: method.GetParameters(),
+						resultSelector: (resolvedParameter, actualParameter) => resolvedParameter.Resolvable ? resolvedParameter.Value : Convert.ChangeType(resolvedParameter.Descriptor, actualParameter.ParameterType))
+					.ToArray();
 				try
 				{
 					return method.Invoke(commandContext, parameters);
@@ -186,7 +283,7 @@ namespace CommandContext
 
 
 
-		static readonly Regex MethodSignatureRegex = new Regex("^(?<methodName>\\w*)\\((?<p0>\\w+)?(?:,\\s?(?<p1>\\w+))?(?:,\\s?(?<p2>\\w+))?(?:,\\s?(?<p3>\\w+))?\\)$", RegexOptions.Compiled);
+		static readonly Regex MethodSignatureRegex = new Regex("^(?<methodName>\\w*)\\((?<p0>[\\.\\w]+)?(?:,\\s?(?<p1>[\\.\\w]+))?(?:,\\s?(?<p2>[\\.\\w]+))?(?:,\\s?(?<p3>[\\.\\w]+))?\\)$", RegexOptions.Compiled);
 		static TResult MatchMethodSignature<TResult>(string path, Func<string, string[], TResult> continuation)
 		{
 			var methodSignatureMatch = MethodSignatureRegex.Match(path);
@@ -258,7 +355,7 @@ namespace CommandContext
 
 
 
-		static Func<object, object> CommandContextResolver = element => (element as DependencyObject).CommandContext();
+		internal static Func<object, object> CommandContextResolver = element => (element as DependencyObject).CommandContext();
 		public static Func<Action, Func<bool>, ICommand> CommandConstructor = (execute, canExecute) => new Command(execute, canExecute);
 	}
 }

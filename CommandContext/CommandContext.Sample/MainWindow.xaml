@@ -12,12 +12,17 @@
 				<TextBlock DockPanel.Dock="Top" Text="MouseDown / MouseUp" />
 				<Rectangle x:Name="rect" Height="30" Fill="Aqua" MouseDown="{cmdbdg:CommandBinding 'SayHi()'}" MouseUp="{cmdbdg:CommandBinding 'SayHi()'}"/>
 			</DockPanel>
-			<Button Margin="10" Content="Click" Click="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
-			<Button Margin="10" Content="Command" Command="{cmdbdg:CommandBinding 'SayHiTo(123)'}"></Button>
+			<Button Margin="10" Content="Click event: SayHi()" Click="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
+			<Button Margin="10" Content="Command with direct parameter: SayHiTo(123)" Command="{cmdbdg:CommandBinding 'SayHiTo(123)'}"></Button>
+			<StackPanel Margin="10" Orientation="Horizontal">
+				<CheckBox Content="CanExecute" IsChecked="{Binding Enabled}" VerticalAlignment="Center" Margin="5" />
+				<Button Content="Execute" Command="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
+			</StackPanel>
 			<DockPanel Margin="10">
-				<TextBlock DockPanel.Dock="Top" Text="Binding.SourceUpdated" />
+				<TextBlock DockPanel.Dock="Top" Text="Event: Binding.SourceUpdated" />
 				<TextBox Background="LightSteelBlue" Text="{Binding Input,Mode=TwoWay,NotifyOnSourceUpdated=True}" Binding.SourceUpdated="{cmdbdg:CommandBinding 'SayHiTo(Text)'}"/>
 			</DockPanel>
+			<Button Margin="10" Content="Command with indirect parameter: SayHiTo(DataContext.Input)" Command="{cmdbdg:CommandBinding 'SayHiTo(DataContext.Input)'}"></Button>
 		</StackPanel>
 	</Grid>
 </Window>
