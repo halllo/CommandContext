@@ -18,6 +18,8 @@ namespace CommandContext.Tests
 			public object DataContext { get; set; }
 			public OverloadType1 AmbiguousProperty1 { get; set; }
 			public OverloadType2 AmbiguousProperty2 { get; set; }
+			public Control Nested { get; set; }
+			public object DirectObject { get; set; }
 
 			public void Do() => Do_Argument = "<NULL>";
 			public void Do(string s) => Do_Argument = s ?? "<NULL>";
@@ -26,6 +28,7 @@ namespace CommandContext.Tests
 				Do_Argument = s1;
 				Do_Argument2 = s2;
 			}
+			public void DoObject(object o) => Do_Argument = o?.ToString() ?? "<NULL>";
 			public void DoAmbiguous(OverloadType1 t1) => Do_Argument = t1?.ToString() ?? "<NULL1>";
 			public void DoAmbiguous(OverloadType2 t2) => Do_Argument = t2?.ToString() ?? "<NULL2>";
 			public void DoAmbiguous(OverloadType1 t1, int i1) => Do_Argument = (t1?.ToString() ?? "<NULL1>") + "_" + i1;
@@ -82,6 +85,20 @@ namespace CommandContext.Tests
 		}
 
 		[TestMethod]
+		public void DirectPropertyOfControlAsObjectParameter()
+		{
+			var control = new Control
+			{
+				AmbiguousProperty2 = new OverloadType2(),
+			};
+
+			var command = CommandBinding.CreateCommand(control, "DoObject(AmbiguousProperty2)");
+			command.Execute(null);
+
+			Assert.AreEqual(new OverloadType2().ToString(), control.Do_Argument);
+		}
+
+		[TestMethod]
 		public void TwoDirectPropertiesOfControlAsParameters()
 		{
 			var control = new Control
@@ -126,7 +143,7 @@ namespace CommandContext.Tests
 		}
 
 		[TestMethod]
-		public void AmbiguousMethodNameOverloadsWithDifferentTypes()
+		public void OverloadsWithDifferentTypesAndSameTypeArgument()
 		{
 			var control = new Control
 			{
@@ -144,7 +161,20 @@ namespace CommandContext.Tests
 		}
 
 		[TestMethod]
-		public void AmbiguousMethodNameOverloadsWithDifferentTypesButNull()
+		public void OverloadsWithDifferentTypesButObjectArgument()
+		{
+			var control = new Control
+			{
+				DirectObject = new OverloadType2(),
+			};
+
+			var command = CommandBinding.CreateCommand(control, "DoAmbiguous(DirectObject)");
+			command.Execute(null);
+			Assert.AreEqual(new OverloadType2().ToString(), control.Do_Argument);
+		}
+
+		[TestMethod]
+		public void OverloadsWithDifferentTypesButNull()
 		{
 			var control = new Control
 			{
@@ -162,7 +192,24 @@ namespace CommandContext.Tests
 		}
 
 		[TestMethod]
-		public void AmbiguousMethodNameOverloadsWithDifferentTypesAndInteger()
+		public void OverloadsWithIndirectParameterOfDifferentTypesButNull()
+		{
+			var control = new Control
+			{
+				Nested = null
+			};
+
+			var command = CommandBinding.CreateCommand(control, "DoAmbiguous(Nested.AmbiguousProperty2)");
+			command.Execute(null);
+			Assert.AreEqual("<NULL2>", control.Do_Argument);
+
+			command = CommandBinding.CreateCommand(control, "DoAmbiguous(Nested.AmbiguousProperty1)");
+			command.Execute(null);
+			Assert.AreEqual("<NULL1>".ToString(), control.Do_Argument);
+		}
+
+		[TestMethod]
+		public void OverloadsWithDifferentTypesAndInteger()
 		{
 			var control = new Control
 			{
@@ -180,7 +227,7 @@ namespace CommandContext.Tests
 		}
 
 		[TestMethod]
-		public void AmbiguousMethodNameOverloadsWithDifferentTypesButNullAndInteger()
+		public void OverloadsWithDifferentTypesButNullAndInteger()
 		{
 			var control = new Control
 			{
