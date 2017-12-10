@@ -175,25 +175,33 @@ namespace CommandContext
 					else
 					{
 						var splitted = a.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-						var target = instance;
-						var result = default(object);
-						var resultType = default(Type);
+						var result = instance;
+						var resultType = result.GetType();
 						foreach (var split in splitted)
 						{
-							if (target == null)
+							if (result != null)
 							{
-								resultType = null;
-								break;
-							}
-							var property = target.GetType().GetProperty(split, BindingFlags.Public | BindingFlags.Instance);
-							if (property != null)
+								var property = resultType.GetProperty(split, BindingFlags.Public | BindingFlags.Instance);
+								if (property != null)
+								{
+									result = property.GetValue(result);
+									resultType = result?.GetType() ?? property.PropertyType;
+								}
+								else
+								{
+									return ResolvedParameter.Unresolvable(a);
+								}
+							} else
 							{
-								resultType = property.PropertyType;
-								result = target = property.GetValue(target);
-							}
-							else
-							{
-								return ResolvedParameter.Unresolvable(a);
+								var property = resultType.GetProperty(split, BindingFlags.Public | BindingFlags.Instance);
+								if (property != null)
+								{
+									resultType = property.PropertyType;
+								}
+								else
+								{
+									resultType = null;
+								}
 							}
 						}
 						return ResolvedParameter.New(result, resultType, a);
@@ -239,7 +247,7 @@ namespace CommandContext
 								}
 								else if (resolvedParameter.Type == null)
 								{
-									return !methodParameterType.IsValueType;
+									return !methodParameterType.IsValueType;//try to cast it later
 								}
 								else if (resolvedParameter.Value == null)
 								{
