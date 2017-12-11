@@ -191,7 +191,8 @@ namespace CommandContext
 								{
 									return ResolvedParameter.Unresolvable(a);
 								}
-							} else
+							}
+							else
 							{
 								var property = resultType.GetProperty(split, BindingFlags.Public | BindingFlags.Instance);
 								if (property != null)
@@ -201,6 +202,7 @@ namespace CommandContext
 								else
 								{
 									resultType = null;
+									break;
 								}
 							}
 						}
@@ -229,8 +231,8 @@ namespace CommandContext
 					foreach (var method in methods)
 					{
 						var parameterTypeMatches = Enumerable.Zip(
-							first: method.GetParameters().Select(p => p.ParameterType), 
-							second: resolvedParameters, 
+							first: method.GetParameters().Select(p => p.ParameterType),
+							second: resolvedParameters,
 							resultSelector: (methodParameterType, resolvedParameter) =>
 							{
 								if (!resolvedParameter.Resolvable)
