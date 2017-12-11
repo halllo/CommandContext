@@ -143,6 +143,20 @@ namespace CommandContext.Tests
 		}
 
 		[TestMethod]
+		public void IndirectPropertySecondDegreeOfNullOfControlAsParameter()
+		{
+			var control = new Control
+			{
+				DataContext = null
+			};
+
+			var command = CommandBinding.CreateCommand(control, "DoAmbiguous(DataContext.Nested.AmbiguousProperty1)");
+			command.Execute(null);
+
+			Assert.AreEqual("<NULL1>", control.Do_Argument);
+		}
+
+		[TestMethod]
 		public void OverloadsWithDifferentTypesAndSameTypeArgument()
 		{
 			var control = new Control
