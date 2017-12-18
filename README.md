@@ -47,9 +47,9 @@ That includes binding to Binding.SourceUpdated in order to get notified when a r
 ...
 ```
 
-And you can also pass in method arguments. Arguments can either be 'this' (the element it was bound to), properties of that element or simple constants.
+And you can also pass in method arguments. Arguments can either be 'this' (the element it was bound to), properties of that element, event handler arguments or simple constants.
 ```xaml
 <!--View.xaml-->
-<Button Tag="123" Content="{Binding MethodTitle}" Click="{cmdctx:CommandBinding Method(this,Tag,true)}"/>
+<Button Tag="1" Content="{Binding MethodTitle}" Click="{cmdctx:CommandBinding Method(this,Tag,e.RoutedEvent,true)}"/>
 ...
 ```

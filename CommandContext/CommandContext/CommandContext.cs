@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
@@ -75,7 +76,7 @@ namespace CommandContext
 			{
 				var instance = GetPropertyInstance(serviceProvider);
 				return MatchMethodSignature(Path, (methodName, methodArguments) =>
-					CreateCommand(instance, methodName, methodArguments));
+					CreateCommand(instance, methodName, methodArguments, contextParameters: null));
 			}
 			else if (targetPropertyType.Name == "RuntimeMethodInfo")
 			{
@@ -83,7 +84,7 @@ namespace CommandContext
 				var eventName = Regex.Match(GetPropertyName(serviceProvider), "Add(.*)Handler").Groups[1].Value;
 				var @event = instance.GetType().GetEvent(eventName);
 				return MatchMethodSignature(Path, (methodName, methodArguments) =>
-					CreateEventHandler(@event.EventHandlerType, () => MethodReflection.Invoke(instance, methodName, methodArguments)));
+					CreateEventHandler(@event.EventHandlerType, (contextParameters) => MethodReflection.Invoke(instance, methodName, methodArguments, contextParameters)));
 			}
 			else if (targetPropertyType.Name == "RuntimeEventInfo")
 			{
@@ -91,7 +92,7 @@ namespace CommandContext
 				var eventName = GetPropertyName(serviceProvider);
 				var @event = instance.GetType().GetEvent(eventName);
 				return MatchMethodSignature(Path, (methodName, methodArguments) =>
-					CreateEventHandler(@event.EventHandlerType, () => MethodReflection.Invoke(instance, methodName, methodArguments)));
+					CreateEventHandler(@event.EventHandlerType, (contextParameters) => MethodReflection.Invoke(instance, methodName, methodArguments, contextParameters)));
 			}
 			else
 			{
@@ -99,16 +100,16 @@ namespace CommandContext
 			}
 		}
 
-		public static ICommand CreateCommand(object instance, string path)
+		public static ICommand CreateCommand(object instance, string path, Dictionary<string, object> contextParameters = null)
 		{
-			return MatchMethodSignature(path, (methodName, methodArguments) => CreateCommand(instance, methodName, methodArguments));
+			return MatchMethodSignature(path, (methodName, methodArguments) => CreateCommand(instance, methodName, methodArguments, contextParameters));
 		}
 
-		static ICommand CreateCommand(object instance, string methodName, string[] methodArguments)
+		static ICommand CreateCommand(object instance, string methodName, string[] methodArguments, Dictionary<string, object> contextParameters)
 		{
 			return CommandConstructor(
-				() => MethodReflection.Invoke(instance, methodName, methodArguments),
-				() => MethodReflection.CanInvoke(instance, methodName, methodArguments)
+				() => MethodReflection.Invoke(instance, methodName, methodArguments, contextParameters),
+				() => MethodReflection.CanInvoke(instance, methodName, methodArguments, contextParameters)
 			);
 		}
 
@@ -120,14 +121,14 @@ namespace CommandContext
 
 		static class MethodReflection
 		{
-			public static void Invoke(object instance, string methodName, string[] methodArguments)
+			public static void Invoke(object instance, string methodName, string[] methodArguments, Dictionary<string, object> contextParameters)
 			{
 				var commandContext = CommandContextResolver(instance);
 				if (commandContext == null)
 				{
 					throw new NotSupportedException($"\"{instance.GetType().Name}\" has no CommandContext.");
 				}
-				var parameters = ResolveParameters(instance, methodArguments);
+				var parameters = ResolveParameters(instance, methodArguments, contextParameters);
 				var dataContextType = commandContext.GetType();
 				var methods = dataContextType
 					.GetMethods(BindingFlags.Public | BindingFlags.Instance)
@@ -144,12 +145,12 @@ namespace CommandContext
 				}
 			}
 
-			public static bool CanInvoke(object instance, string methodName, string[] methodArguments)
+			public static bool CanInvoke(object instance, string methodName, string[] methodArguments, Dictionary<string, object> contextParameters)
 			{
 				var commandContext = CommandContextResolver(instance);
 				if (commandContext != null)
 				{
-					var parameters = ResolveParameters(instance, methodArguments);
+					var parameters = ResolveParameters(instance, methodArguments, contextParameters);
 					var dataContextType = commandContext.GetType();
 					var methods = dataContextType
 						.GetMethods(BindingFlags.Public | BindingFlags.Instance)
@@ -164,7 +165,7 @@ namespace CommandContext
 				return true;
 			}
 
-			static ResolvedParameter[] ResolveParameters(object instance, string[] methodArguments)
+			static ResolvedParameter[] ResolveParameters(object instance, string[] methodArguments, Dictionary<string, object> contextParameters)
 			{
 				var parameters = methodArguments.Select((a, index) =>
 				{
@@ -176,7 +177,19 @@ namespace CommandContext
 					{
 						var splitted = a.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
 						var result = instance;
+
+						if (contextParameters != null)
+						{
+							var firstSplit = splitted.FirstOrDefault();
+							if (firstSplit != null && contextParameters.ContainsKey(firstSplit))
+							{
+								result = contextParameters[firstSplit];
+								splitted = splitted.Skip(1).ToArray();
+							}
+						}
+
 						var resultType = result.GetType();
+
 						foreach (var split in splitted)
 						{
 							if (result != null)
@@ -319,12 +332,12 @@ namespace CommandContext
 
 
 
-		static Delegate CreateEventHandler(Type type, Action action)
+		static Delegate CreateEventHandler(Type type, Action<Dictionary<string, object>> action)
 		{
-			if (type == typeof(MouseButtonEventHandler)) return new MouseButtonEventHandler((s, e) => action());
-			if (type == typeof(KeyEventHandler)) return new KeyEventHandler((s, e) => action());
-			if (type == typeof(RoutedEventHandler)) return new RoutedEventHandler((s, e) => action());
-			if (type == typeof(EventHandler<DataTransferEventArgs>)) return new EventHandler<DataTransferEventArgs>((s, e) => action());
+			if (type == typeof(MouseButtonEventHandler)) return new MouseButtonEventHandler((s, e) => action(new Dictionary<string, object> { { "sender", s }, { "e", e } }));
+			if (type == typeof(KeyEventHandler)) return new KeyEventHandler((s, e) => action(new Dictionary<string, object> { { "sender", s }, { "e", e } }));
+			if (type == typeof(RoutedEventHandler)) return new RoutedEventHandler((s, e) => action(new Dictionary<string, object> { { "sender", s }, { "e", e } }));
+			if (type == typeof(EventHandler<DataTransferEventArgs>)) return new EventHandler<DataTransferEventArgs>((s, e) => action(new Dictionary<string, object> { { "sender", s }, { "e", e } }));
 			else throw new ArgumentException($"CommandBinding events is not yet supported for \"{type.Name}\"");
 		}
 

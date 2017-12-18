@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Collections.Generic;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CommandContext.Tests
 {
@@ -29,6 +30,12 @@ namespace CommandContext.Tests
 				Do_Argument2 = s2;
 			}
 			public void DoObject(object o) => Do_Argument = o?.ToString() ?? "<NULL>";
+			public void DoObjects(object o1, object o2)
+			{
+				Do_Argument = o1?.ToString() ?? "<NULL>";
+				Do_Argument2 = o2?.ToString() ?? "<NULL>";
+			}
+
 			public void DoAmbiguous(OverloadType1 t1) => Do_Argument = t1?.ToString() ?? "<NULL1>";
 			public void DoAmbiguous(OverloadType2 t2) => Do_Argument = t2?.ToString() ?? "<NULL2>";
 			public void DoAmbiguous(OverloadType1 t1, int i1) => Do_Argument = (t1?.ToString() ?? "<NULL1>") + "_" + i1;
@@ -256,6 +263,18 @@ namespace CommandContext.Tests
 			command = CommandBinding.CreateCommand(control, "DoAmbiguous(AmbiguousProperty1, 321)");
 			command.Execute(null);
 			Assert.AreEqual("<NULL1>_321", control.Do_Argument);
+		}
+
+		[TestMethod]
+		public void ContextParameter()
+		{
+			var control = new Control();
+
+			var command = CommandBinding.CreateCommand(control, "DoObjects(sender,sender.Input)", new Dictionary<string, object> { { "sender", new ViewModel { Input = "blabla" } } });
+			command.Execute(null);
+
+			Assert.AreEqual(new ViewModel().ToString(), control.Do_Argument);
+			Assert.AreEqual("blabla", control.Do_Argument2);
 		}
 	}
 }

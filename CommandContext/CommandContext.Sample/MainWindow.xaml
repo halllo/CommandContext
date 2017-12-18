@@ -23,6 +23,10 @@
 				<TextBox Background="LightSteelBlue" Text="{Binding Input,Mode=TwoWay,NotifyOnSourceUpdated=True}" Binding.SourceUpdated="{cmdbdg:CommandBinding 'SayHiTo(Text)'}"/>
 			</DockPanel>
 			<Button Margin="10" Content="Command with indirect parameter: SayHiTo(DataContext.Input)" Command="{cmdbdg:CommandBinding 'SayHiTo(DataContext.Input)'}"></Button>
+			<DockPanel Margin="10">
+				<TextBlock DockPanel.Dock="Top" Text="Event: PreviewKeyDown mit EventArgs" />
+				<TextBox Background="Chartreuse" PreviewKeyDown="{cmdbdg:CommandBinding 'SayHiTo(e.Key)'}"/>
+			</DockPanel>
 		</StackPanel>
 	</Grid>
 </Window>
