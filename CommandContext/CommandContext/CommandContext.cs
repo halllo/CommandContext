@@ -81,15 +81,27 @@ namespace CommandContext
 			else if (targetPropertyType.Name == "RuntimeMethodInfo")
 			{
 				var instance = GetPropertyInstance(serviceProvider);
-				var eventName = Regex.Match(GetPropertyName(serviceProvider), "Add(.*)Handler").Groups[1].Value;
+				var propertyMemberInfo = GetPropertyMemberInfo(serviceProvider);
+				var eventName = Regex.Match(propertyMemberInfo.Name, "Add(.*)Handler").Groups[1].Value;
+
+				Type eventHandlerType;
 				var @event = instance.GetType().GetEvent(eventName);
+				if (@event != null)
+				{
+					eventHandlerType = @event.EventHandlerType;
+				}
+				else
+				{
+					var routedEvent = EventManager.GetRoutedEventsForOwner(propertyMemberInfo.DeclaringType).Single(e => e.Name == eventName);
+					eventHandlerType = routedEvent.HandlerType;
+				}
 				return MatchMethodSignature(Path, (methodName, methodArguments) =>
-					CreateEventHandler(@event.EventHandlerType, (contextParameters) => MethodReflection.Invoke(instance, methodName, methodArguments, contextParameters)));
+					CreateEventHandler(eventHandlerType, (contextParameters) => MethodReflection.Invoke(instance, methodName, methodArguments, contextParameters)));
 			}
 			else if (targetPropertyType.Name == "RuntimeEventInfo")
 			{
 				var instance = GetPropertyInstance(serviceProvider);
-				var eventName = GetPropertyName(serviceProvider);
+				var eventName = GetPropertyMemberInfo(serviceProvider).Name;
 				var @event = instance.GetType().GetEvent(eventName);
 				return MatchMethodSignature(Path, (methodName, methodArguments) =>
 					CreateEventHandler(@event.EventHandlerType, (contextParameters) => MethodReflection.Invoke(instance, methodName, methodArguments, contextParameters)));
@@ -356,11 +368,10 @@ namespace CommandContext
 			return targetProvider.TargetProperty.GetType();
 		}
 
-		string GetPropertyName(IServiceProvider serviceProvider)
+		MemberInfo GetPropertyMemberInfo(IServiceProvider serviceProvider)
 		{
 			var targetProvider = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
-
-			return ((MemberInfo)targetProvider.TargetProperty).Name;
+			return (MemberInfo)targetProvider.TargetProperty;
 		}
 
 		object GetPropertyInstance(IServiceProvider serviceProvider)
