@@ -106,6 +106,39 @@ namespace CommandContext
 				return MatchMethodSignature(Path, (methodName, methodArguments) =>
 					CreateEventHandler(@event.EventHandlerType, (contextParameters) => MethodReflection.Invoke(instance, methodName, methodArguments, contextParameters)));
 			}
+			else if (targetPropertyType.Name == "RuntimePropertyInfo")
+			{
+				var instance = GetPropertyInstance(serviceProvider);
+				var propertyMemberInfo = GetPropertyMemberInfo(serviceProvider);
+				var propertyType = propertyMemberInfo.GetType().GetProperty("PropertyType")?.GetValue(propertyMemberInfo) as Type;
+				if (propertyType == null) return null;
+				else if (typeof(ICommand).IsAssignableFrom(propertyType))
+				{
+					return MatchMethodSignature(Path, (methodName, methodArguments) =>
+						CreateCommand(instance, methodName, methodArguments, contextParameters: null));
+				}
+				else if (typeof(Func<DependencyObject, object>).IsAssignableFrom(propertyType))
+				{
+					var commandType = propertyType.GenericTypeArguments[1];
+					if (typeof(ICommand).IsAssignableFrom(commandType))
+					{
+						return ConvertFactory(returnType: commandType, factory: remoteInstance =>
+							MatchMethodSignature(Path, (methodName, methodArguments) =>
+								CreateCommand(remoteInstance, methodName, methodArguments, contextParameters: null)));
+					}
+					else
+					{
+						return ConvertFactory(returnType: commandType, factory: remoteInstance =>
+							MatchMethodSignature(Path, (methodName, methodArguments) =>
+								CreateEventHandler(commandType, (contextParameters) => MethodReflection.Invoke(remoteInstance, methodName, methodArguments, contextParameters))));
+					}
+				}
+				else
+				{
+					return MatchMethodSignature(Path, (methodName, methodArguments) =>
+						CreateEventHandler(propertyType, (contextParameters) => MethodReflection.Invoke(instance, methodName, methodArguments, contextParameters)));
+				}
+			}
 			else
 			{
 				throw new NotSupportedException($"\"{Path}\" not supported as {nameof(CommandBinding)}.");
@@ -343,6 +376,10 @@ namespace CommandContext
 
 
 
+
+		static Func<DependencyObject, T> ConvertFactoryGeneric<T>(Func<DependencyObject, object> factory) => dpo => (T)factory(dpo);
+		static readonly MethodInfo FactoryConverter = typeof(CommandBinding).GetMethod(nameof(ConvertFactoryGeneric), BindingFlags.NonPublic | BindingFlags.Static);
+		static object ConvertFactory(Type returnType, Func<DependencyObject, object> factory) => FactoryConverter.MakeGenericMethod(returnType).Invoke(null, new object[] { factory });
 
 		static Delegate CreateEventHandler(Type type, Action<Dictionary<string, object>> action)
 		{

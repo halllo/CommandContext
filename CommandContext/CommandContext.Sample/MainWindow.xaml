@@ -3,29 +3,34 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:cmdbdg="clr-namespace:CommandContext;assembly=CommandContext"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="525">
+		xmlns:cmdctx="clr-namespace:CommandContext;assembly=CommandContext"
+		xmlns:Extensions="clr-namespace:CommandContext.Extensions;assembly=CommandContext"
+		mc:Ignorable="d"
+        Title="MainWindow" Height="500" Width="525">
 	<Grid x:Name="TheGrid">
 		<StackPanel>
 			<DockPanel Margin="10">
 				<TextBlock DockPanel.Dock="Top" Text="MouseDown / MouseUp" />
-				<Rectangle x:Name="rect" Height="30" Fill="Aqua" MouseDown="{cmdbdg:CommandBinding 'SayHi()'}" MouseUp="{cmdbdg:CommandBinding 'SayHi()'}"/>
+				<Rectangle x:Name="rect" Height="30" Fill="Aqua" MouseDown="{cmdctx:CommandBinding 'SayHi()'}" MouseUp="{cmdctx:CommandBinding 'SayHi()'}"/>
 			</DockPanel>
-			<Button Margin="10" Content="Click event: SayHi()" Click="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
-			<Button Margin="10" Content="Command with direct parameter: SayHiTo(123)" Command="{cmdbdg:CommandBinding 'SayHiTo(123)'}"></Button>
+			<Button Margin="10" Content="Click event: SayHi()" Click="{cmdctx:CommandBinding 'SayHi()'}"></Button>
+			<Button Margin="10" Content="Command with direct parameter: SayHiTo(123)" Command="{cmdctx:CommandBinding 'SayHiTo(123)'}"></Button>
 			<StackPanel Margin="10" Orientation="Horizontal">
 				<CheckBox Content="CanExecute" IsChecked="{Binding Enabled}" VerticalAlignment="Center" Margin="5" />
-				<Button Content="Execute" Command="{cmdbdg:CommandBinding 'SayHi()'}"></Button>
+				<Button Content="Execute" Command="{cmdctx:CommandBinding 'SayHi()'}"></Button>
 			</StackPanel>
 			<DockPanel Margin="10">
 				<TextBlock DockPanel.Dock="Top" Text="Event: Binding.SourceUpdated" />
-				<TextBox Background="LightSteelBlue" Text="{Binding Input,Mode=TwoWay,NotifyOnSourceUpdated=True}" Binding.SourceUpdated="{cmdbdg:CommandBinding 'SayHiTo(Text)'}"/>
+				<TextBox Background="PaleVioletRed" Text="{Binding Input,Mode=TwoWay,NotifyOnSourceUpdated=True}" Binding.SourceUpdated="{cmdctx:CommandBinding 'SayHiTo(Text)'}"/>
 			</DockPanel>
-			<Button Margin="10" Content="Command with indirect parameter: SayHiTo(DataContext.Input)" Command="{cmdbdg:CommandBinding 'SayHiTo(DataContext.Input)'}"></Button>
+			<DockPanel Margin="10">
+				<TextBlock DockPanel.Dock="Top" Text="Event: BindingSourceUpdated (syntactic sugar without ViewModel)" />
+				<TextBox Background="PaleVioletRed" Text="{Extensions:WhenChanged Invoke={cmdctx:CommandBinding 'SayHiTo(Text)'}}"/>
+			</DockPanel>
+			<Button Margin="10" Content="Command with indirect parameter: SayHiTo(DataContext.Input)" Command="{cmdctx:CommandBinding 'SayHiTo(DataContext.Input)'}"></Button>
 			<DockPanel Margin="10">
 				<TextBlock DockPanel.Dock="Top" Text="Event: PreviewKeyDown mit EventArgs" />
-				<TextBox Background="Chartreuse" PreviewKeyDown="{cmdbdg:CommandBinding 'SayHiTo(e.Key)'}"/>
+				<TextBox Background="Chartreuse" PreviewKeyDown="{cmdctx:CommandBinding 'SayHiTo(e.Key)'}"/>
 			</DockPanel>
 		</StackPanel>
 	</Grid>
