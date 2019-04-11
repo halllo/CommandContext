@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CommandContext</RootNamespace>
-    <AssemblyName>CommandContext</AssemblyName>
+    <AssemblyName>CommandContext.NetFramework</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -46,7 +46,7 @@
   <ItemGroup>
     <Compile Include="Command.cs" />
     <Compile Include="CommandContext.cs" />
-    <Compile Include="Extensions\WhenChanged.cs" />
+    <Compile Include="WhenChanged.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

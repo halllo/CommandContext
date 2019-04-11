@@ -1,12 +1,13 @@
-﻿<Window x:Class="CommandContext_Sample.MainWindow"
+﻿<Window x:Class="CommandContext.Sample.NetCore.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:cmdctx="clr-namespace:CommandContext;assembly=CommandContext"
-		xmlns:Extensions="clr-namespace:CommandContext.Extensions;assembly=CommandContext"
-		mc:Ignorable="d"
-        Title="MainWindow" Height="500" Width="525">
+		xmlns:cmdctx="clr-namespace:CommandContext;assembly=CommandContext.NetCore"
+		xmlns:Extensions="clr-namespace:CommandContext.Extensions;assembly=CommandContext.NetCore"
+        xmlns:local="clr-namespace:CommandContext.Sample.NetCore"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
 	<Grid x:Name="TheGrid">
 		<StackPanel>
 			<DockPanel Margin="10">
