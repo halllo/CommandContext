@@ -4,7 +4,7 @@
         <id>CommandContext</id>
         <version>$version$</version>
         <authors>Manuel Naujoks</authors>
-        <licenseUrl>http://opensource.org/licenses/MIT</licenseUrl>
+        <license type="expression">MIT</license>
         <projectUrl>https://github.com/halllo/CommandContext</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>DataContext and CommandContext allow you to separate data and commands into two dedicated view models.</description>
