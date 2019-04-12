@@ -7,8 +7,8 @@
     <ProjectGuid>{90DDE7F6-EE68-49E2-9B36-2D61C0C242A8}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CommandContext_Sample</RootNamespace>
-    <AssemblyName>CommandContext.Sample</AssemblyName>
+    <RootNamespace>CommandContext.Sample</RootNamespace>
+    <AssemblyName>CommandContext.Sample.NetFramework</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -96,9 +96,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CommandContext\CommandContext.csproj">
+    <ProjectReference Include="..\CommandContext.NetFramework\CommandContext.NetFramework.csproj">
       <Project>{68f03b89-c338-4b20-af5d-39d2d7aec6bb}</Project>
-      <Name>CommandContext</Name>
+      <Name>CommandContext.NetFramework</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

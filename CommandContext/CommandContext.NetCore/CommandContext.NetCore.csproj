@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon />
+    <StartupObject />
+    <RootNamespace>CommandContext</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\CommandContext.NetFramework\Command.cs" Link="Command.cs" />
+    <Compile Include="..\CommandContext.NetFramework\CommandContext.cs" Link="CommandContext.cs" />
+    <Compile Include="..\CommandContext.NetFramework\WhenChanged.cs" Link="WhenChanged.cs" />
+  </ItemGroup>
+
+</Project>

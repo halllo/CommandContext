@@ -13,6 +13,7 @@
         <tags>CommandContext CommandBinding Binding ViewModel vm MVVM DataContext MVC</tags>
     </metadata>
     <files>
-        <file src="..\CommandContext\CommandContext\bin\Release\CommandContext.dll" target="lib\net461\CommandContext.dll" />
+        <file src="..\CommandContext\CommandContext.NetFramework\bin\Release\CommandContext.NetFramework.dll" target="lib\net461\CommandContext.NetFramework.dll" />
+        <file src="..\CommandContext\CommandContext.NetCore\bin\Release\netcoreapp3.0\CommandContext.NetCore.dll" target="lib\netcoreapp3.0\CommandContext.NetCore.dll" />
     </files>
 </package>

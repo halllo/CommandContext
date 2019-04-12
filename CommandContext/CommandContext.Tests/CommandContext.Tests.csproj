@@ -56,9 +56,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CommandContext\CommandContext.csproj">
+    <ProjectReference Include="..\CommandContext.NetFramework\CommandContext.NetFramework.csproj">
       <Project>{68f03b89-c338-4b20-af5d-39d2d7aec6bb}</Project>
-      <Name>CommandContext</Name>
+      <Name>CommandContext.NetFramework</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
